@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUTOFILL PLOTHOLE</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-dark: #1a202c;
+            --panel-dark: #2d3748;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --border-color: #4a5568;
+            --occupied-color: #e53e3e;
+            --empty-color: #48bb78;
+            --accent-color: #38b2ac;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        #clock {
+            font-size: 1.2rem;
+            font-weight: 400;
+            background-color: var(--panel-dark);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: right;
+        }
+        #clock .date {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .dashboard-panel {
+            background-color: var(--panel-dark);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            min-height: 300px;
+        }
+        .dashboard-panel h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        .dashboard-panel h2 .fa-solid {
+            margin-right: 10px;
+            color: var(--accent-color);
+        }
+
+        #user-list {
+            list-style-type: none;
+        }
+        #user-list li {
+            background-color: var(--border-color);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.6;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #user-list li:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        #parking-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 15px;
+        }
+        .slot {
+            padding: 20px 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            cursor: default;
+        }
+        .slot:hover {
+            transform: scale(1.05);
+        }
+        .slot .fa-car {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        .slot.occupied {
+            background-color: var(--occupied-color);
+        }
+        .slot.empty {
+            background-color: var(--empty-color);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="dashboard-header">
+        <h1><i class="fa-solid fa-car-on" style="color: var(--accent-color);"></i> Dashboard AUTOPLOT</h1>
+        <div id="clock">
+            <div id="time">--:--:--</div>
+            <div id="date">--/--/----</div>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        <div class="dashboard-panel">
+            <h2><i class="fa-solid fa-users"></i>WHO ARE IN-ED!</h2>
+            <ul id="user-list">
+                </ul>
+        </div>
+        <div class="dashboard-panel">
+            <h2><i class="fa-solid fa-square-parking"></i>HOLE STATUS</h2>
+            <div id="parking-slots">
+                </div>
+        </div>
+    </main>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // --- BƯỚC 1: CẤU HÌNH FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "...",
+            authDomain: "...",
+            databaseURL: "...",
+            projectId: "...",
+            storageBucket: "...",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        // --- BƯỚC 2: KHỞI TẠO FIREBASE ---
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // --- BƯỚC 3: LOGIC THEO DÕI DỮ LIỆU ---
+        const userListElement = document.getElementById('user-list');
+        const cardRef = database.ref('CARD'); 
+
+        cardRef.on('value', (snapshot) => {
+            const cardArray = snapshot.val();
+            userListElement.innerHTML = ''; 
+            if (Array.isArray(cardArray)) {
+                let hasUserInside = false;
+                // Vòng lặp này đã đúng với cấu trúc CARD là mảng bắt đầu từ index 0
+                cardArray.forEach((cardData, index) => {
+                    if (cardData && cardData.status === true) {
+                        const listItem = document.createElement('li');
+                        const name = cardData.name || 'Không có tên';
+                        const number = cardData.number || 'Không có số';
+                        // Hiển thị index (0, 1, 2...) làm ID Thẻ
+                        listItem.innerHTML = `<strong>Tên:</strong> ${name}<br><strong>ID Thẻ:</strong> ${index}`;
+                        userListElement.appendChild(listItem);
+                        hasUserInside = true;
+                    }
+                });
+                if (!hasUserInside) {
+                    userListElement.innerHTML = '<li>NO ONE IN!</li>';
+                }
+            } else {
+                userListElement.innerHTML = '<li>Không có dữ liệu thẻ.</li>';
+            }
+        });
+
+        const parkingSlotsElement = document.getElementById('parking-slots');
+        const parkslotRef = database.ref('PARKSLOT');
+
+        parkslotRef.on('value', (snapshot) => {
+            const slotArray = snapshot.val();
+            parkingSlotsElement.innerHTML = ''; 
+            if (Array.isArray(slotArray)) {
+                // SỬA ĐỔI: Dùng vòng lặp for để chỉ lấy 3 vị trí đầu tiên
+                for (let i = 0; i < 3; i++) {
+                    // Kiểm tra nếu mảng slotArray không đủ 3 phần tử
+                    if (i >= slotArray.length) break;
+
+                    const slotStatus = slotArray[i]; // Lấy trạng thái từ index i (0, 1, 2)
+                    const slotDiv = document.createElement('div');
+                    slotDiv.classList.add('slot');
+                    
+                    if (slotStatus === true) { 
+                        slotDiv.classList.add('occupied');
+                        // Hiển thị Slot 1, 2, 3...
+                        slotDiv.innerHTML = `<i class="fa-solid fa-car"></i><span>Slot ${i + 1}</span>`;
+                    } else {
+                        slotDiv.classList.add('empty');
+                        // Hiển thị Slot 1, 2, 3...
+                        slotDiv.textContent = `Slot ${i + 1}`;
+                    }
+                    parkingSlotsElement.appendChild(slotDiv);
+                }
+            } else {
+                parkingSlotsElement.innerHTML = '<p>Không có dữ liệu vị trí đỗ.</p>';
+            }
+        });
+
+        // --- BƯỚC 4: CHỨC NĂNG ĐỒNG HỒ THỜI GIAN THỰC ---
+        const timeElement = document.getElementById('time');
+        const dateElement = document.getElementById('date');
+
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('vi-VN');
+            const dateString = now.toLocaleDateString('vi-VN', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric' 
+            });
+            
+            timeElement.textContent = timeString;
+            dateElement.textContent = dateString;
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
+
+    </script>
+</body>
+</html>

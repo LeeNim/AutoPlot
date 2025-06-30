@@ -1,0 +1,27 @@
+{
+  "Button": "on",
+  "CARD": [
+    {
+      "name": "A Be Ce X Y Z",
+      "number": "1640370083",
+      "status": true
+    },
+    {
+      "name": "A A O B C",
+      "number": "1913197061",
+      "status": true
+    },
+    {
+      "name": "mmC",
+      "number": "3778903714",
+      "status": true
+    }
+  ],
+  "PARKSLOT": [
+    false,
+    false,
+    false,
+    false,
+    false
+  ]
+}
